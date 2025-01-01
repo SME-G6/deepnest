@@ -120,28 +120,34 @@
     return points;
   }
 
-  global.simplify = simplify;
-    
-    })(typeof window !== 'undefined' ? window : global);
+  // Exporting all functions for testing and external use
+  module.exports = {
+    simplify,
+    simplifyRadialDist,
+    simplifyDouglasPeucker,
+    simplifyDPStep,
+    getSqDist,
+    getSqSegDist
+  };
+})();
 
-    
-    // test
-    if (require.main === module) {
-      const points = [
-          { x: 0, y: 0 },
-          { x: 1, y: 1 },
-          { x: 2, y: 2 },
-          { x: 3, y: 3 },
-          { x: 4, y: 4 },
-          { x: 5, y: 5 },
-          { x: 6, y: 6 },
-          { x: 7, y: 7 },
-          { x: 8, y: 8 },
-          { x: 9, y: 9 },
-      ];
+  //   // test
+  //   if (require.main === module) {
+  //     const points = [
+  //         { x: 0, y: 0 },
+  //         { x: 1, y: 1 },
+  //         { x: 2, y: 2 },
+  //         { x: 3, y: 3 },
+  //         { x: 4, y: 4 },
+  //         { x: 5, y: 5 },
+  //         { x: 6, y: 6 },
+  //         { x: 7, y: 7 },
+  //         { x: 8, y: 8 },
+  //         { x: 9, y: 9 },
+  //     ];
   
-      const tolerance = 1;
-      const highestQuality = false;
+  //     const tolerance = 1;
+  //     const highestQuality = false;
   
-      console.log('Simplified points:', simplify(points, tolerance, highestQuality));
-  }
+  //     console.log('Simplified points:', simplify(points, tolerance, highestQuality));
+  // }
