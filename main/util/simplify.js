@@ -21,28 +21,31 @@
 
   // square distance from a point to a segment
   function getSqSegDist(p, p1, p2) {
-    var x = p1.x,
-      y = p1.y,
-      dx = p2.x - x,
-      dy = p2.y - y;
-
-    if (dx !== 0 || dy !== 0) {
-      var t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
-
-      if (t > 1) {
-        x = p2.x;
-        y = p2.y;
-      } else if (t > 0) {
-        x += dx * t;
-        y += dy * t;
-      }
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    
+    // If the segment is a point (p1 and p2 are the same)
+    if (dx === 0 && dy === 0) {
+      return (p.x - p1.x) ** 2 + (p.y - p1.y) ** 2;
     }
-
-    dx = p.x - x;
-    dy = p.y - y;
-
-    return dx * dx + dy * dy;
+  
+    // Compute the projection factor t of point p onto the line defined by p1 and p2
+    const t = ((p.x - p1.x) * dx + (p.y - p1.y) * dy) / (dx * dx + dy * dy);
+  
+    // Clamp t to the range [0, 1] to ensure the closest point is on the segment
+    const clampedT = Math.max(0, Math.min(1, t));
+  
+    // Calculate the closest point on the segment using clampedT
+    const closestX = p1.x + clampedT * dx;
+    const closestY = p1.y + clampedT * dy;
+  
+    // Return the squared distance from point p to the closest point on the segment
+    const distX = p.x - closestX;
+    const distY = p.y - closestY;
+  
+    return distX ** 2 + distY ** 2;
   }
+  
   // rest of the code doesn't care about point format
 
   // basic distance-based simplification
