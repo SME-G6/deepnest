@@ -170,69 +170,45 @@
     return this;
   };
 
-Parallel.prototype.workerPool = [];
-Parallel.prototype.maxWorkerPoolSize = 10;
-
-Parallel.prototype._getOrCreateWorker = function (cb, env) {
-  if (this.workerPool.length > 0) {
-    return this.workerPool.pop(); // Reuse an existing worker
-  }
-
-  // Create a new worker
-  var src = this.getWorkerSource(cb, env);
-  var wrk;
-
-  if (isNode) {
-    wrk = new Worker(this.options.evalPath);
-  } else if (this.requiredScripts.length !== 0 && this.options.evalPath !== null) {
-    wrk = new Worker(this.options.evalPath);
-  } else if (URL) {
-    var blob = new Blob([src], { type: "text/javascript" });
-    var url = URL.createObjectURL(blob);
-    wrk = new Worker(url);
-  } else {
-    throw new Error("Worker creation failed! Ensure proper eval.js or browser support.");
-  }
-
-  return wrk;
-};
-
-Parallel.prototype._createNewWorker = function () {
-  var src = this.getWorkerSource(cb, env);
-  if (isNode) {
-    return new Worker(this.options.evalPath);
-  } else {
-    if (this.requiredScripts.length !== 0 && this.options.evalPath !== null) {
-      return new Worker(this.options.evalPath);
-    } else if (URL) {
-      var blob = new Blob([src], { type: "text/javascript" });
-      var url = URL.createObjectURL(blob);
-      return new Worker(url);
+  Parallel.prototype._spawnWorker = function (cb, env) {
+    var wrk;
+    var src = this.getWorkerSource(cb, env);
+    if (isNode) {
+      wrk = new Worker(this.options.evalPath);
+      wrk.postMessage(src);
     } else {
-      throw new Error("Worker creation failed!");
+      if (Worker === undefined) {
+        return undefined;
+      }
+
+      try {
+        if (this.requiredScripts.length !== 0) {
+          if (this.options.evalPath !== null) {
+            wrk = new Worker(this.options.evalPath);
+            wrk.postMessage(src);
+          } else {
+            throw new Error("Can't use required scripts without eval.js!");
+          }
+        } else if (!URL) {
+          throw new Error("Can't create a blob URL in this browser!");
+        } else {
+          var blob = new Blob([src], { type: "text/javascript" });
+          var url = URL.createObjectURL(blob);
+
+          wrk = new Worker(url);
+        }
+      } catch (e) {
+        if (this.options.evalPath !== null) {
+          // blob/url unsupported, cross-origin error
+          wrk = new Worker(this.options.evalPath);
+          wrk.postMessage(src);
+        } else {
+          throw e;
+        }
+      }
     }
-  }
-};
 
-Parallel.prototype._spawnWorker = function (cb, env) {
-  var wrk = this._getOrCreateWorker(cb, env);
-
-  wrk.onmessage = function (msg) {
-    wrk.removeEventListener("message", wrk.onmessage);
-    wrk.removeEventListener("error", wrk.onerror);
-    wrk.postMessage = null; // Clear any pending messages
-  };
-
-  return wrk;
-};
-
-
-  Parallel.prototype._returnWorkerToPool = function (wrk) {
-    if (this.workerPool.length < this.maxWorkerPoolSize) {
-      this.workerPool.push(wrk); // Keep worker in the pool
-    } else {
-      wrk.terminate(); // Terminate if pool size limit is exceeded
-    }
+    return wrk;
   };
 
   Parallel.prototype.spawn = function (cb, env) {
@@ -315,11 +291,11 @@ Parallel.prototype._spawnWorker = function (cb, env) {
         newOp.resolve(err, null);
       } else if (++doneOps === that.data.length) {
         newOp.resolve(null, that.data);
-        if (wrk) that._returnWorkerToPool(wrk);
+        if (wrk) wrk.terminate();
       } else if (startedOps < that.data.length) {
         that._spawnMapWorker(startedOps++, cb, done, env, wrk);
       } else {
-        if (wrk) that._returnWorkerToPool(wrk);
+        if (wrk) wrk.terminate();
       }
     }
 
