@@ -8,16 +8,21 @@
 })(this, function (exports) {
   "use strict";
 
+  /**
+   * Calculates the area of a polygon
+   * @param {Array} polygon - Array of points to represented the vertices of the polygon.
+   * @returns {number} The area of the polygon. Returns NaN if the polygon is invalid. (A valid polygon must have at least 3 points)
+   */
   var area = function (polygon) {
     if (!polygon || polygon.length < 3) {
       console.error("Invalid polygon:", polygon);
-      return NaN; // A valid polygon must have at least 3 points
+      return NaN; 
     }
   
     var i = -1,
       n = polygon.length,
       a,
-      b = polygon[n - 1], // Last vertex
+      b = polygon[n - 1], 
       area = 0;
   
     while (++i < n) {
@@ -26,10 +31,14 @@
       area += a[1] * b[0] - a[0] * b[1];
     }
   
-    return Math.abs(area) / 2; // Ensure the area is always positive
+    return Math.abs(area) / 2; 
   };  
   
-
+  /**
+   * Calculates the geometic center (centroid) of a polygon
+   * @param {Array} polygon - Array of points to represented the vertices of the polygon. 
+   * @returns {Array} The centriod is given by [x, y]
+   */
   var centroid = function (polygon) {
     var i = -1,
       n = polygon.length,
@@ -51,21 +60,32 @@
     return (k *= 3), [x / k, y / k];
   };
 
-  // Returns the 2D cross product of AB and AC vectors, i.e., the z-component of
-  // the 3D cross product in a quadrant I Cartesian coordinate system (+x is
-  // right, +y is up). Returns a positive value if ABC is counter-clockwise,
-  // negative if clockwise, and zero if the points are collinear.
+  /**
+   * Returns the 2D cross product of AB and AC vectors, i.e. the z-component of the 3D cross product in a quadrant I Cartesian coordinate system (+x is right, +y is up).
+   * @param {Array} a -- Point A [x, y].
+   * @param {Array} b -- Point B [x, y].
+   * @param {Array} c -- Point C [x, y]
+   * @returns {number} Positive if ABC is counter-clockwise, negative if clockwise, zero if colinear 
+   */
   var cross = function (a, b, c) {
     return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
   };
 
+   /**
+   * Orders points lexicographically, (A to Z)
+   * @param {Array} a - Point A [x, y].
+   * @param {Array} b - Point B [x, y].
+   * @returns {number} Negative if a < b, positive if a > b, zero if equal.
+   */
   function lexicographicOrder(a, b) {
     return a[0] - b[0] || a[1] - b[1];
   }
 
-  // Computes the upper convex hull per the monotone chain algorithm.
-  // Assumes points.length >= 3, is sorted by x, unique in y.
-  // Returns an array of indices into points in left-to-right order.
+ /**
+   * Computes the upper convex hull of a set of points using the monotone chain algorithm.
+   * @param {Array} points - Array of points [x, y].
+   * @returns {Array} Array of indices into points in left-to-right order.
+   */
   function computeUpperHullIndexes(points) {
     var n = points.length,
       indexes = [0, 1],
@@ -84,7 +104,8 @@
       indexes[size++] = i;
     }
 
-    return indexes.slice(0, size); // remove popped points
+    // remove popped points
+    return indexes.slice(0, size); 
   }
 
   var hull = function (points) {
@@ -120,6 +141,12 @@
     return hull;
   };
 
+    /**
+   * Determines if a point is inside a polygon.
+   * @param {Array} polygon - Array of points, representing the vertices of the polygon.
+   * @param {Array} point - The point [x, y] to check.
+   * @returns {boolean} True if the point is inside the polygon, else false.
+   */
   var contains = function (polygon, point) {
     var n = polygon.length,
       p = polygon[n - 1],
@@ -141,6 +168,11 @@
     return inside;
   };
 
+  /**
+   * Calculates the perimeter of a polygon.
+   * @param {Array} polygon - Array of points, representing the vertices of the polygon.
+   * @returns {number} The perimeter of the polygon.
+   */
   var length = function (polygon) {
     var i = -1,
       n = polygon.length,
