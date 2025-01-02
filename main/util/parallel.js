@@ -93,6 +93,7 @@
     this.operation.resolve(null, this.data);
     this.requiredScripts = [];
     this.requiredFunctions = [];
+    this.workerPool = new WorkerPool(this.options.maxWorkers); // New Worker Pool
   }
 
   // static method
@@ -170,46 +171,44 @@
     return this;
   };
 
-  Parallel.prototype._spawnWorker = function (cb, env) {
-    var wrk;
-    var src = this.getWorkerSource(cb, env);
-    if (isNode) {
-      wrk = new Worker(this.options.evalPath);
-      wrk.postMessage(src);
-    } else {
-      if (Worker === undefined) {
-        return undefined;
+  class WorkerPool {
+    constructor(maxWorkers) {
+      this.maxWorkers = maxWorkers;
+      this.pool = [];
+    }
+
+    getWorker(src) {
+      if (this.pool.length > 0) {
+        return this.pool.pop();
       }
+      return new Worker(src);
+    }
 
-      try {
-        if (this.requiredScripts.length !== 0) {
-          if (this.options.evalPath !== null) {
-            wrk = new Worker(this.options.evalPath);
-            wrk.postMessage(src);
-          } else {
-            throw new Error("Can't use required scripts without eval.js!");
-          }
-        } else if (!URL) {
-          throw new Error("Can't create a blob URL in this browser!");
-        } else {
-          var blob = new Blob([src], { type: "text/javascript" });
-          var url = URL.createObjectURL(blob);
-
-          wrk = new Worker(url);
-        }
-      } catch (e) {
-        if (this.options.evalPath !== null) {
-          // blob/url unsupported, cross-origin error
-          wrk = new Worker(this.options.evalPath);
-          wrk.postMessage(src);
-        } else {
-          throw e;
-        }
+    releaseWorker(wrk) {
+      if (this.pool.length < this.maxWorkers) {
+        this.pool.push(wrk);
+      } else {
+        wrk.terminate();
       }
     }
+  }
+
+  Parallel.prototype._spawnWorker = function (cb, env) {
+    var src = this.getWorkerSource(cb, env);
+    const wrk = this.workerPool.getWorker(src);
+
+    wrk.onmessage = (msg) => {
+      this.workerPool.releaseWorker(wrk);
+    };
+
+    wrk.onerror = (err) => {
+      this.workerPool.releaseWorker(wrk);
+      throw new Error("Worker error: " + err.message);
+    };
 
     return wrk;
   };
+
 
   Parallel.prototype.spawn = function (cb, env) {
     var that = this;
@@ -406,7 +405,7 @@
   Parallel.prototype.then = function (cb, errCb) {
     var that = this;
     var newOp = new Operation();
-    errCb = typeof errCb === "function" ? errCb : function () {};
+    errCb = typeof errCb === "function" ? errCb : function () { };
 
     this.operation.then(
       function () {
