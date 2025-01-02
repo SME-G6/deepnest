@@ -93,7 +93,6 @@
     this.operation.resolve(null, this.data);
     this.requiredScripts = [];
     this.requiredFunctions = [];
-    this.workerPool = new WorkerPool(this.options.maxWorkers); // New Worker Pool
   }
 
   // static method
@@ -171,44 +170,40 @@
     return this;
   };
 
-  class WorkerPool {
-    constructor(maxWorkers) {
-      this.maxWorkers = maxWorkers;
-      this.pool = [];
-    }
+  Parallel.prototype.workerPool = [];
+Parallel.prototype._getOrCreateWorker = function () {
+  if (this.workerPool.length > 0) {
+    return this.workerPool.pop();
+  }
+  return this._createNewWorker();
+};
 
-    getWorker(src) {
-      if (this.pool.length > 0) {
-        return this.pool.pop();
-      }
-      return new Worker(src);
-    }
-
-    releaseWorker(wrk) {
-      if (this.pool.length < this.maxWorkers) {
-        this.pool.push(wrk);
-      } else {
-        wrk.terminate();
-      }
+Parallel.prototype._createNewWorker = function () {
+  var src = this.getWorkerSource(cb, env);
+  if (isNode) {
+    return new Worker(this.options.evalPath);
+  } else {
+    if (this.requiredScripts.length !== 0 && this.options.evalPath !== null) {
+      return new Worker(this.options.evalPath);
+    } else if (URL) {
+      var blob = new Blob([src], { type: "text/javascript" });
+      var url = URL.createObjectURL(blob);
+      return new Worker(url);
+    } else {
+      throw new Error("Worker creation failed!");
     }
   }
+};
 
   Parallel.prototype._spawnWorker = function (cb, env) {
-    var src = this.getWorkerSource(cb, env);
-    const wrk = this.workerPool.getWorker(src);
-
-    wrk.onmessage = (msg) => {
-      this.workerPool.releaseWorker(wrk);
-    };
-
-    wrk.onerror = (err) => {
-      this.workerPool.releaseWorker(wrk);
-      throw new Error("Worker error: " + err.message);
-    };
-
+    var wrk = this._getOrCreateWorker();
+    wrk.postMessage({ cb: cb.toString(), env: JSON.stringify(env) });
     return wrk;
   };
 
+  Parallel.prototype._returnWorkerToPool = function (wrk) {
+    this.workerPool.push(wrk);
+  };
 
   Parallel.prototype.spawn = function (cb, env) {
     var that = this;
@@ -290,11 +285,11 @@
         newOp.resolve(err, null);
       } else if (++doneOps === that.data.length) {
         newOp.resolve(null, that.data);
-        if (wrk) wrk.terminate();
+        if (wrk) that._returnWorkerToPool(wrk);
       } else if (startedOps < that.data.length) {
         that._spawnMapWorker(startedOps++, cb, done, env, wrk);
       } else {
-        if (wrk) wrk.terminate();
+        if (wrk) that._returnWorkerToPool(wrk);
       }
     }
 
@@ -405,7 +400,7 @@
   Parallel.prototype.then = function (cb, errCb) {
     var that = this;
     var newOp = new Operation();
-    errCb = typeof errCb === "function" ? errCb : function () { };
+    errCb = typeof errCb === "function" ? errCb : function () {};
 
     this.operation.then(
       function () {
