@@ -170,12 +170,31 @@
     return this;
   };
 
-  Parallel.prototype.workerPool = [];
-Parallel.prototype._getOrCreateWorker = function () {
+Parallel.prototype.workerPool = [];
+Parallel.prototype.maxWorkerPoolSize = 10;
+
+Parallel.prototype._getOrCreateWorker = function (cb, env) {
   if (this.workerPool.length > 0) {
-    return this.workerPool.pop();
+    return this.workerPool.pop(); // Reuse an existing worker
   }
-  return this._createNewWorker();
+
+  // Create a new worker
+  var src = this.getWorkerSource(cb, env);
+  var wrk;
+
+  if (isNode) {
+    wrk = new Worker(this.options.evalPath);
+  } else if (this.requiredScripts.length !== 0 && this.options.evalPath !== null) {
+    wrk = new Worker(this.options.evalPath);
+  } else if (URL) {
+    var blob = new Blob([src], { type: "text/javascript" });
+    var url = URL.createObjectURL(blob);
+    wrk = new Worker(url);
+  } else {
+    throw new Error("Worker creation failed! Ensure proper eval.js or browser support.");
+  }
+
+  return wrk;
 };
 
 Parallel.prototype._createNewWorker = function () {
@@ -195,14 +214,25 @@ Parallel.prototype._createNewWorker = function () {
   }
 };
 
-  Parallel.prototype._spawnWorker = function (cb, env) {
-    var wrk = this._getOrCreateWorker();
-    wrk.postMessage({ cb: cb.toString(), env: JSON.stringify(env) });
-    return wrk;
+Parallel.prototype._spawnWorker = function (cb, env) {
+  var wrk = this._getOrCreateWorker(cb, env);
+
+  wrk.onmessage = function (msg) {
+    wrk.removeEventListener("message", wrk.onmessage);
+    wrk.removeEventListener("error", wrk.onerror);
+    wrk.postMessage = null; // Clear any pending messages
   };
 
+  return wrk;
+};
+
+
   Parallel.prototype._returnWorkerToPool = function (wrk) {
-    this.workerPool.push(wrk);
+    if (this.workerPool.length < this.maxWorkerPoolSize) {
+      this.workerPool.push(wrk); // Keep worker in the pool
+    } else {
+      wrk.terminate(); // Terminate if pool size limit is exceeded
+    }
   };
 
   Parallel.prototype.spawn = function (cb, env) {
