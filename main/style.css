@@ -1627,3 +1627,15 @@ input:focus, select:focus, textarea:focus {
   background: var(--button-primary);
 }
 
+body.dark-mode .unit-label {
+  color: var(--text-primary);
+}
+
+body.dark-mode #configform dl.formgroup * {
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+}
+
+body.dark-mode #home *{
+  color: var(--text-secondary);
+}
