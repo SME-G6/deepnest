@@ -9,45 +9,83 @@ remote.initialize();
 app.commandLine.appendSwitch("--enable-precise-memory-info");
 
 /*
- Menu Template (macOS Only) 
+// macOS Menu Template
+const isMac = process.platform === "darwin";
+
 const template = [
-{
-    label: 'Deepnest',
+  ...(isMac
+    ? [
+        {
+          label: app.name,
+          submenu: [
+            { role: "about" },
+            { type: "separator" },
+            { role: "services", submenu: [] },
+            { type: "separator" },
+            { role: "hide" },
+            { role: "hideothers" },
+            { role: "unhide" },
+            { type: "separator" },
+            { role: "quit" },
+          ],
+        },
+      ]
+    : []),
+  {
+    label: "File",
+    submenu: [isMac ? { role: "close" } : { role: "quit" }],
+  },
+  {
+    label: "Edit",
+    submenu: [
+      { role: "undo" },
+      { role: "redo" },
+      { type: "separator" },
+      { role: "cut" },
+      { role: "copy" },
+      { role: "paste" },
+      { role: "pasteandmatchstyle" },
+      { role: "delete" },
+      { role: "selectall" },
+    ],
+  },
+  {
+    label: "View",
+    submenu: [
+      { role: "reload" },
+      { role: "forcereload" },
+      { role: "toggledevtools" },
+      { type: "separator" },
+      { role: "resetzoom" },
+      { role: "zoomin" },
+      { role: "zoomout" },
+      { type: "separator" },
+      { role: "togglefullscreen" },
+    ],
+  },
+  {
+    label: "Window",
+    submenu: [
+      { role: "minimize" },
+      { role: "zoom" },
+      ...(isMac
+        ? [{ type: "separator" }, { role: "front" }, { type: "separator" }, { role: "window" }]
+        : [{ role: "close" }]),
+    ],
+  },
+  {
+    role: "help",
     submenu: [
       {
-        role: 'about'
+        label: "Learn More",
+        click: async () => {
+          const { shell } = require("electron");
+          await shell.openExternal("https://electronjs.org");
+        },
       },
-      {
-        type: 'separator'
-      },
-      {
-        role: 'services',
-        submenu: []
-      },
-      {
-        type: 'separator'
-      },
-      {
-        role: 'hide'
-      },
-      {
-        role: 'hideothers'
-      },
-      {
-        role: 'unhide'
-      },
-      {
-        type: 'separator'
-      },
-      {
-        role: 'quit'
-      }
-    ]
-  }
-];
-
-const menu = Menu.buildFromTemplate(template);
-Menu.setApplicationMenu(menu);
+    ],
+  },
+]; 
 */
 
 //  Global Variables 
@@ -97,7 +135,7 @@ function createMainWindow() {
       slashes: true,
     })
   );
-
+  
   mainWindow.setMenu(null);
 
   if (process.env["deepnest_debug"] === "1")
