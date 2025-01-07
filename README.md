@@ -102,6 +102,17 @@ Create a zip file of this folder for a simple distribution.
 
 If the environment variable "deepnest_debug" has a value of "1", deepnest will open the browser dev tools (debugger/inspector).
 
+## MacOS menu 
+To enable the macOS-specific menu feature:
+
+1. Uncomment the relevant code section in main.js for the menu template.
+2. Add the Menu module to the Electron imports:
+```sh
+const { app, ipcMain, BrowserWindow, screen, Menu } = require("electron");
+
+```
+3. Rebuild and run the project.
+
 ## License
 
 The main license is the MIT.
