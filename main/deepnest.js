@@ -5,7 +5,7 @@
 
 (function (root) {
   "use strict";
-
+  // Initialize DeepNest with Electron IPC Renderer
   root.DeepNest = new DeepNest(require("electron").ipcRenderer);
 
   function DeepNest(eventEmitter) {
@@ -26,15 +26,13 @@
       simplify: false,
     };
 
-    // list of imported files
-    // import: {filename: 'blah.svg', svg: svgroot}
+    // Imported SVG files
     this.imports = [];
 
-    // list of all extracted parts
-    // part: {name: 'part name', quantity: ...}
+    // Extracted parts from SVGs
     this.parts = [];
 
-    // a pure polygonal representation of parts that lives only during the nesting step
+    // Polygonal representation used during nesting
     this.partsTree = [];
 
     this.working = false;
@@ -49,6 +47,7 @@
     // a running list of placements
     this.nests = [];
 
+    //Import and parse an SVG file
     this.importsvg = function (
       filename,
       dirpath,
@@ -56,9 +55,7 @@
       scalingFactor,
       dxfFlag
     ) {
-      // parse svg
-      // config.scale is the default scale, and may not be applied
-      // scalingFactor is an absolute scaling that must be applied regardless of input svg contents
+      //Parse and clean SVG with default (config.scale) and absolute (scalingFactor) scaling
       svg = SvgParser.load(dirpath, svgstring, config.scale, scalingFactor);
       svg = SvgParser.clean(dxfFlag);
 
@@ -76,23 +73,9 @@
 
       return parts;
 
-      // test simplification
-      /*for(i=0; i<parts.length; i++){
-				var part = parts[i];
-				this.renderPolygon(part.polygontree, svg);
-				var simple = this.simplifyPolygon(part.polygontree);
-				this.renderPolygon(simple, svg, 'active');
-				if(part.polygontree.children){
-					for(var j=0; j<part.polygontree.children.length; j++){
-						var schild = this.simplifyPolygon(part.polygontree.children[j], true);
-						//this.renderPolygon(schild, svg, 'active');
-					}
-				}
-				//this.renderPolygon(simple.exterior, svg, 'error');
-			}*/
     };
 
-    // debug function
+    // Render a polygon on the SVG for debugging
     this.renderPolygon = function (poly, svg, highlight) {
       if (!poly || poly.length == 0) {
         return;
@@ -114,7 +97,7 @@
       svg.appendChild(polyline);
     };
 
-    // debug function
+    // Render points as circles on the SVG for debugging
     this.renderPoints = function (points, svg, highlight) {
       for (var i = 0; i < points.length; i++) {
         var circle = window.document.createElementNS(
@@ -160,14 +143,6 @@
       var self = this;
 
       if (config.simplify) {
-        /*
-				// use convex hull
-				var hull = new ConvexHullGrahamScan();
-				for(var i=0; i<polygon.length; i++){
-					hull.addPoint(polygon[i].x, polygon[i].y);
-				}
-
-				return hull.getHull();*/
         var hull = this.getHull(polygon);
         if (hull) {
           return hull;
@@ -188,8 +163,7 @@
       copy.push(copy[0]);
 
       // mark all segments greater than ~0.25 in to be kept
-      // the PD simplification algo doesn't care about the accuracy of long lines, only the absolute distance of each point
-      // we care a great deal
+      // prioritize long-line accuracy over point distance
       for (i = 0; i < copy.length - 1; i++) {
         var p1 = copy[i];
         var p2 = copy[i + 1];
@@ -591,98 +565,6 @@
 
       return ClipperLib.Clipper.PointInPolygon(pt, p) > 0;
     };
-
-    /*this.simplifyPolygon = function(polygon, concavehull){
-			function clone(p){
-				var newp = [];
-				for(var i=0; i<p.length; i++){
-					newp.push({
-						x: p[i].x,
-						y: p[i].y
-						//fuck: p[i].fuck
-					});
-				}
-				return newp;
-			}
-			if(concavehull){
-				var hull = concavehull;
-			}
-			else{
-				var hull = new ConvexHullGrahamScan();
-				for(var i=0; i<polygon.length; i++){
-					hull.addPoint(polygon[i].x, polygon[i].y);
-				}
-
-				hull = hull.getHull();
-			}
-
-			var hullarea = Math.abs(GeometryUtil.polygonArea(hull));
-
-			var concave = [];
-			var detail = [];
-
-			// fill concave[] with convex points, ensuring same order as initial polygon
-			for(i=0; i<polygon.length; i++){
-				var p = polygon[i];
-				var found = false;
-				for(var j=0; j<hull.length; j++){
-					var hp = hull[j];
-					if(GeometryUtil.almostEqual(hp.x, p.x) && GeometryUtil.almostEqual(hp.y, p.y)){
-						found = true;
-						break;
-					}
-				}
-
-				if(found){
-					concave.push(p);
-					//p.fuck = i+'yes';
-				}
-				else{
-					detail.push(p);
-					//p.fuck = i+'no';
-				}
-			}
-
-			var cindex = -1;
-			var simple = [];
-
-			for(i=0; i<polygon.length; i++){
-				var p = polygon[i];
-				if(concave.indexOf(p) > -1){
-					cindex = concave.indexOf(p);
-					simple.push(p);
-				}
-				else{
-
-					var test = clone(concave);
-					test.splice(cindex < 0 ? 0 : cindex+1,0,p);
-
-					var outside = false;
-					for(var j=0; j<detail.length; j++){
-						if(detail[j] == p){
-							continue;
-						}
-						if(!this.pointInPolygon(detail[j], test)){
-							//console.log(detail[j], test);
-							outside = true;
-							break;
-						}
-					}
-
-					if(outside){
-						continue;
-					}
-
-					var testarea =  Math.abs(GeometryUtil.polygonArea(test));
-					//console.log(testarea, hullarea);
-					if(testarea/hullarea < 0.98){
-						simple.push(p);
-					}
-				}
-			}
-
-			return simple;
-		}*/
 
     // assuming no intersections, return a tree where odd leaves are parts and even ones are holes
     // might be easier to use the DOM, but paths can't have paths as children. So we'll just make our own tree.
