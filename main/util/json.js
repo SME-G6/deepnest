@@ -1,7 +1,4 @@
-var JSON;
-if (!JSON) {
-  JSON = {};
-}
+var JSON = JSON || {};
 (function () {
   function f(n) {
     return n < 10 ? "0" + n : n;
@@ -156,7 +153,7 @@ if (!JSON) {
         typeof replacer !== "function" &&
         (typeof replacer !== "object" || typeof replacer.length !== "number")
       ) {
-        throw new Error("JSON.stringify");
+        throw new Error("Invalid replacer argument in JSON.stringify");
       }
       return str("", { "": value });
     };
@@ -200,7 +197,7 @@ if (!JSON) {
             .replace(/(?:^|:|,)(?:\s*\[)+/g, "")
         )
       ) {
-        j = eval("(" + text + ")");
+        j = Function('"use strict"; return (' + text + ')')();
         return typeof reviver === "function" ? walk({ "": j }, "") : j;
       }
       throw new SyntaxError("JSON.parse");
