@@ -1,7 +1,4 @@
-var JSON;
-if (!JSON) {
-  JSON = {};
-}
+var JSON = JSON || {};
 (function () {
   function f(n) {
     return n < 10 ? "0" + n : n;
